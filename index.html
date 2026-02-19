@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI提示词违禁词检测工具</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --danger: #f72585;
+            --success: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --border: #dee2e6;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .subtitle {
+            color: #6c757d;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        @media (max-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            height: fit-content;
+        }
+        
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 250px;
+            padding: 20px;
+            border: 2px solid var(--border);
+            border-radius: 15px;
+            font-size: 1rem;
+            resize: vertical;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            transition: all 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #e9ecef;
+            color: var(--dark);
+        }
+        
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        
+        .results-container {
+            background: var(--light);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .results-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .result-count {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .clean {
+            color: var(--success);
+        }
+        
+        .found {
+            color: var(--danger);
+        }
+        
+        .highlighted-text {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            line-height: 1.8;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .matched-word {
+            background-color: rgba(247, 37, 133, 0.15);
+            color: var(--danger);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            border: 1px solid rgba(247, 37, 133, 0.3);
+        }
+        
+        .word-list {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .word-tag {
+            background: rgba(247, 37, 133, 0.1);
+            color: var(--danger);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(247, 37, 133, 0.2);
+        }
+        
+        .info-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            margin-top: 30px;
+        }
+        
+        .info-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .cache-info {
+            background: rgba(67, 97, 238, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            margin-top: 25px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 40px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .alert-success {
+            background: rgba(76, 201, 240, 0.1);
+            border-left: 4px solid var(--success);
+            color: #0a7d8c;
+        }
+        
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #adb5bd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-shield-alt"></i> AI提示词违禁词检测工具</h1>
+            <p class="subtitle">专为AI绘画提示词设计的敏感词检测工具，基于真实词库，精准识别违规内容</p>
+        </header>
+        
+        <div class="alert alert-success">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>隐私说明：</strong> 所有检测均在您的浏览器本地完成，文本不会上传到任何服务器。词库已内置，无需网络连接即可使用。
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title"><i class="fas fa-robot"></i> AI提示词检测</h2>
+                    <div class="badge" id="aiWordCount">加载中...</div>
+                </div>
+                
+                <textarea id="aiInput" placeholder="请输入或粘贴您的AI绘画提示词，例如：a beautiful landscape with mountains and rivers...">A detailed portrait of a character in a dynamic scene with realistic lighting. The style should be professional and artistic, showing creativity and attention to detail.</textarea>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="checkAI()">
+                        <i class="fas fa-search"></i> 检测提示词
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearAI()">
+                        <i class="fas fa-eraser"></i> 清空内容
+                    </button>
+                </div>
+                
+                <div class="loading" id="aiLoading">
+                    <div class="spinner"></div>
+                    <p>正在检测中，请稍候...</p>
+                </div>
+                
+                <div class="results-container" id="aiResults">
+                    <div class="results-header">
+                        <div class="results-title">检测结果</div>
+                        <div class="result-count clean" id="aiCount">0 个违禁词</div>
+                    </div>
+                    
+                    <div id="aiResultText" class="highlighted-text">
+                        请输入AI绘画提示词并点击检测按钮。
+                    </div>
+                    
+                    <div id="aiMatchedWords" style="display: none;">
+                        <div style="font-weight: 600; margin-bottom: 10px;">发现的违禁词：</div>
+                        <div class="word-list" id="aiWordList"></div>
+                    </div>
+                    
+                    <div class="empty-state" id="aiEmptyState" style="display: none;">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>未发现违禁词</h3>
+                        <p>您的提示词符合规范，可以安全使用。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title"><i class="fas fa-book"></i> 词库信息</h2>
+                    <div class="badge" id="totalWords">-</div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        <strong>请注意：</strong> 此词库为内容安全检测参考词汇，不代表这些词汇本身具有不良性质，仅用于帮助识别可能违规的内容。
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCount">0</div>
+                        <div class="stat-label">总词汇数量</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="phraseCount">0</div>
+                        <div class="stat-label">短语型词汇</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="synonymCount">0</div>
+                        <div class="stat-label">同义词组</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 25px;">
+                    <div style="font-weight: 600; margin-bottom: 15px;">词库预览（随机示例）：</div>
+                    <div class="word-list" id="wordPreview"></div>
+                </div>
+                
+                <div class="cache-info">
+                    <i class="fas fa-database"></i>
+                    <div>
+                        <strong>本地存储：</strong> 词库已保存到浏览器本地，刷新页面无需重新加载。
+                        <button class="btn btn-secondary" onclick="clearCache()" style="margin-left: 10px; padding: 5px 10px; font-size: 0.8rem;">
+                            清除缓存
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h2 class="info-title"><i class="fas fa-question-circle"></i> 使用说明</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                <div>
+                    <h3 style="color: var(--primary); margin-bottom: 10px;"><i class="fas fa-search"></i> 检测原理</h3>
+                    <p>工具使用精确匹配算法检测提示词中的违禁词，支持：</p>
+                    <ul style="padding-left: 20px; margin-top: 10px;">
+                        <li>完整短语匹配（如 "about_to_be_raped"）</li>
+                        <li>同义词识别（如 "breast_sucking/nipple_suck"）</li>
+                        <li>大小写不敏感匹配</li>
+                        <li>边界匹配防止误判</li>
+                        <li>违禁词欢迎随时投稿</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 style="color: var(--primary); margin-bottom: 10px;"><i class="fas fa-lightbulb"></i> 使用建议</h3>
+                    <ul style="padding-left: 20px;">
+                        <li>输入完整提示词后点击检测按钮</li>
+                        <li>红色高亮显示发现的违禁词</li>
+                        <li>能关注一下小小的牢落吗</li>
+                        <li><a href="https://app.nieta.art/user?uuid=af15844edc114c5a826f7c426c2db2e4" target="_blank" style="color: #4361ee; font-weight: bold; text-decoration: none;">点击关注我</a>，谢谢你喵，老大你是好人喵</li>
+                        <li>修改提示词后重新检测</li>
+                        <li>大概可能也许定期检查词库更新</li>
+                        <li>赏牢落一口饭好吗喵</li>
+                        <li>老奈神了</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div style="background: rgba(67, 97, 238, 0.05); padding: 20px; border-radius: 12px;">
+                <h3 style="color: var(--primary); margin-bottom: 10px;"><i class="fas fa-code"></i> 技术特性</h3>
+                <p>基于提供的AI提示词违禁词库实现，包含 <span id="techWordCount">0</span> 个专业检测词汇，涵盖AI绘画中常见敏感内容类别。工具完全离线工作，保护您的隐私。</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>© 2025 AI提示词违禁词检测工具 | 基于我自己爬的词库乱写 | 版本 V114514.0</p>
+            <p style="margin-top: 10px; font-size: 0.8rem; color: #adb5bd;">
+                <i class="fas fa-exclamation-circle"></i> 本工具仅供你看两眼，实际内容审核请遵循老奈随时变脸
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // ==================== 词库数据 ====================
+        // 使用您提供的AI提示词违禁词库
+        const aiBanWordsRaw = `69,about_to_be_raped,amputee,anal,anal_beads,anal_fingering,anal_fisting,anal_insertion,anilingus,anus,areolae,artificial_vagina,asian,ass,ballgag,bdsm,bestiality,bitgag,blood,body_writing,bondage,bound_arms,bound_wrists,breast_feeding,breast_grab,breast_smother,breast_sucking/nipple_suck,buttjob,cameltoe,caught,censored,cervix,cleave_gag,clitoris,clothed_masturbation,clothed_sex,cock_in_thighhigh,cock_ring,cowgirl_position,crotch_rope,crotch_rub,cum,cum_inside,cum_on_breast,cum_on_food,cum_on_hair,cunnilingus,deepthroat,dildo,doggystyle,double_anal,double_dildo,double_penetration,double_vaginal,egg_vibrator,ejaculation,enema,exhibitionism,faceless_male,facesitting,facial,fat_mons,female_ejaculation,femdom,fingering,fisting,footjob,frogtie,fruit_insertion,futanari,gag,gangbang,ganguro,girl_on_top,gokkun,grinding,groping,hairjob,handjob,happy_sex,have_to_pee,hitachi_magic_wand,hogtie,hreesome3Pgroup_sex/orgy/teamwork,huge_ass,humiliation,incest,insertion,lactation,large_insertion,leash,leg_lock/upright_straddle,masturbation,mind_control,missionary,molestation,mound_of_venus,multiple_insertions,multiple_paizuri,navel_piercing,nipple_piercing,nipple_pull,nipple_torture,nipple_tweak,nipples,no_pussy,nyotaimori,oral/fellatio,paizuri,panties_around_one_leg,panty_gag,peeing,pegging,penetration,penis,piercing,pillory/stocks,playbra_lift,pubic_hair,public,puffy_nipples,pussy/vaginal,pussy_juice,rape,reverse_cowgirl,ring_gag,rope,sex,shaved_pussy,shibari,slave,small_nipples,spanked,spitroast,spread_ass,spreader_bar,stomach_bulge,suspension,tally,tamakeri,tapegag,tentacle,testicles,thigh_sex,transformation,tribadism,triple_penetration,twincest,uncensored,underwater_sex,vibrator,vibrator_in_thighhighs,virgin,vore,voyeurism,wakamezake,walk-in,wide_hips,wooden_horse,x-ray/cross-section/internal_cumshot,breasts,苦命鸳鸯,qaq,restroom`;
+
+        // 处理后的词库
+        let aiBanWords = [];
+        let aiBanWordsExpanded = []; // 展开同义词后的词库
+        let wordCategories = {};
+        
+        // ==================== 初始化函数 ====================
+        function initializeWordLibrary() {
+            console.log("正在初始化词库...");
+            
+            // 解析原始词库字符串
+            const rawWords = aiBanWordsRaw.split(',');
+            
+            // 处理每个词汇
+            rawWords.forEach(word => {
+                const trimmedWord = word.trim();
+                if (!trimmedWord) return;
+                
+                // 检查是否为数字（如开头的"69"）
+                if (/^\d+$/.test(trimmedWord)) {
+                    aiBanWords.push(trimmedWord);
+                    aiBanWordsExpanded.push(trimmedWord);
+                    return;
+                }
+                
+                // 检查是否包含同义词（斜杠分隔）
+                if (trimmedWord.includes('/')) {
+                    const synonyms = trimmedWord.split('/');
+                    aiBanWords.push(trimmedWord); // 保存原始格式
+                    
+                    // 展开同义词
+                    synonyms.forEach(synonym => {
+                        aiBanWordsExpanded.push(synonym.trim());
+                    });
+                } else {
+                    aiBanWords.push(trimmedWord);
+                    aiBanWordsExpanded.push(trimmedWord);
+                }
+            });
+            
+            // 更新UI显示词库信息
+            updateWordLibraryInfo();
+            
+            // 显示词库预览
+            displayWordPreview();
+            
+            console.log(`词库初始化完成：${aiBanWords.length}个原始词汇，${aiBanWordsExpanded.length}个扩展词汇`);
+        }
+        
+        // 更新词库信息显示
+        function updateWordLibraryInfo() {
+            document.getElementById('aiWordCount').textContent = `${aiBanWordsExpanded.length}个词`;
+            document.getElementById('totalWords').textContent = `${aiBanWordsExpanded.length}词`;
+            document.getElementById('totalCount').textContent = aiBanWordsExpanded.length;
+            document.getElementById('techWordCount').textContent = aiBanWordsExpanded.length;
+            
+            // 计算短语型词汇（包含下划线的）
+            const phraseWords = aiBanWordsExpanded.filter(word => word.includes('_'));
+            document.getElementById('phraseCount').textContent = phraseWords.length;
+            
+            // 计算同义词组（包含斜杠的）
+            const synonymGroups = aiBanWords.filter(word => word.includes('/'));
+            document.getElementById('synonymCount').textContent = synonymGroups.length;
+            
+            // 保存到本地存储
+            saveToLocalStorage();
+        }
+        
+        // 显示词库预览
+        function displayWordPreview() {
+            const previewContainer = document.getElementById('wordPreview');
+            previewContainer.innerHTML = '';
+            
+            // 随机选择20个词汇显示
+            const shuffled = [...aiBanWordsExpanded].sort(() => 0.5 - Math.random());
+            const sampleWords = shuffled.slice(0, 20);
+            
+            sampleWords.forEach(word => {
+                const wordElement = document.createElement('div');
+                wordElement.className = 'word-tag';
+                wordElement.textContent = word;
+                wordElement.title = word;
+                previewContainer.appendChild(wordElement);
+            });
+        }
+        
+        // ==================== 检测函数 ====================
+        function checkAI() {
+            const inputText = document.getElementById('aiInput').value;
+            const loadingElement = document.getElementById('aiLoading');
+            const resultElement = document.getElementById('aiResultText');
+            const countElement = document.getElementById('aiCount');
+            const matchedContainer = document.getElementById('aiMatchedWords');
+            const wordListElement = document.getElementById('aiWordList');
+            const emptyStateElement = document.getElementById('aiEmptyState');
+            
+            if (!inputText.trim()) {
+                resultElement.innerHTML = '<span style="color: #6c757d;">请输入要检测的AI提示词。</span>';
+                countElement.textContent = '0 个违禁词';
+                countElement.className = 'result-count clean';
+                matchedContainer.style.display = 'none';
+                emptyStateElement.style.display = 'none';
+                return;
+            }
+            
+            // 显示加载状态
+            loadingElement.style.display = 'block';
+            resultElement.innerHTML = '<span style="color: #6c757d;">正在检测中...</span>';
+            
+            // 使用setTimeout让UI有机会更新
+            setTimeout(() => {
+                performAICheck(inputText);
+                loadingElement.style.display = 'none';
+            }, 50);
+        }
+        
+        function performAICheck(text) {
+            const resultElement = document.getElementById('aiResultText');
+            const countElement = document.getElementById('aiCount');
+            const matchedContainer = document.getElementById('aiMatchedWords');
+            const wordListElement = document.getElementById('aiWordList');
+            const emptyStateElement = document.getElementById('aiEmptyState');
+            
+            // 为每个词汇创建正则表达式，使用单词边界确保精确匹配
+            const foundWords = [];
+            let highlightedText = text;
+            
+            // 对扩展后的词库进行检测
+            aiBanWordsExpanded.forEach(word => {
+                // 创建正则表达式，不区分大小写，使用单词边界
+                const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                
+                // 处理下划线：将下划线视为单词边界的一部分
+                const regexPattern = word.includes('_') 
+                    ? escapedWord.replace(/_/g, '[\\s_]') // 下划线或空格
+                    : `\\b${escapedWord}\\b`; // 单词边界
+                
+                const regex = new RegExp(regexPattern, 'gi');
+                
+                if (regex.test(text)) {
+                    if (!foundWords.includes(word.toLowerCase())) {
+                        foundWords.push(word);
+                    }
+                    
+                    // 高亮显示匹配的词汇
+                    const highlightRegex = new RegExp(`(${escapedWord})`, 'gi');
+                    highlightedText = highlightedText.replace(highlightRegex, '<span class="matched-word">$1</span>');
+                }
+            });
+            
+            // 显示结果
+            if (foundWords.length > 0) {
+                resultElement.innerHTML = highlightedText;
+                countElement.textContent = `${foundWords.length} 个违禁词`;
+                countElement.className = 'result-count found';
+                
+                // 显示匹配的词汇列表
+                wordListElement.innerHTML = '';
+                foundWords.forEach(word => {
+                    const wordElement = document.createElement('div');
+                    wordElement.className = 'word-tag';
+                    wordElement.textContent = word;
+                    wordElement.title = word;
+                    wordListElement.appendChild(wordElement);
+                });
+                
+                matchedContainer.style.display = 'block';
+                emptyStateElement.style.display = 'none';
+                
+                // 保存检测记录
+                saveDetectionRecord(text, foundWords.length);
+            } else {
+                resultElement.innerHTML = '<span style="color: var(--success);"><i class="fas fa-check-circle"></i> 未发现违禁词</span>';
+                countElement.textContent = '0 个违禁词';
+                countElement.className = 'result-count clean';
+                matchedContainer.style.display = 'none';
+                emptyStateElement.style.display = 'block';
+                
+                // 保存检测记录
+                saveDetectionRecord(text, 0);
+            }
+        }
+        
+        // ==================== 工具函数 ====================
+        function clearAI() {
+            document.getElementById('aiInput').value = '';
+            document.getElementById('aiResultText').innerHTML = '请输入AI绘画提示词并点击检测按钮。';
+            document.getElementById('aiCount').textContent = '0 个违禁词';
+            document.getElementById('aiCount').className = 'result-count clean';
+            document.getElementById('aiMatchedWords').style.display = 'none';
+            document.getElementById('aiEmptyState').style.display = 'none';
+        }
+        
+        function saveToLocalStorage() {
+            try {
+                const wordData = {
+                    words: aiBanWordsExpanded,
+                    timestamp: new Date().getTime(),
+                    version: '2.0'
+                };
+                localStorage.setItem('aiBanWords', JSON.stringify(wordData));
+                console.log('词库已保存到本地存储');
+            } catch (e) {
+                console.warn('本地存储失败:', e);
+            }
+        }
+        
+        function loadFromLocalStorage() {
+            try {
+                const savedData = localStorage.getItem('aiBanWords');
+                if (savedData) {
+                    const wordData = JSON.parse(savedData);
+                    // 可以在这里添加版本检查或过期检查
+                    console.log('从本地存储加载词库');
+                    return true;
+                }
+            } catch (e) {
+                console.warn('从本地存储加载失败:', e);
+            }
+            return false;
+        }
+        
+        function saveDetectionRecord(text, violationCount) {
+            try {
+                const records = JSON.parse(localStorage.getItem('detectionRecords') || '[]');
+                records.unshift({
+                    text: text.length > 100 ? text.substring(0, 100) + '...' : text,
+                    violationCount: violationCount,
+                    timestamp: new Date().getTime()
+                });
+                
+                // 只保留最近的50条记录
+                if (records.length > 50) records.length = 50;
+                
+                localStorage.setItem('detectionRecords', JSON.stringify(records));
+            } catch (e) {
+                // 忽略错误
+            }
+        }
+        
+        function clearCache() {
+            if (confirm('确定要清除本地缓存吗？这将重置所有设置和记录。')) {
+                localStorage.removeItem('aiBanWords');
+                localStorage.removeItem('detectionRecords');
+                alert('缓存已清除。页面将重新加载。');
+                location.reload();
+            }
+        }
+        
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始初始化...');
+            
+            // 尝试从本地存储加载词库
+            const hasCache = loadFromLocalStorage();
+            
+            // 初始化词库
+            initializeWordLibrary();
+            
+            // 自动检测示例文本
+            setTimeout(() => {
+                checkAI();
+            }, 1000);
+            
+            // 添加键盘快捷键
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter 检测AI提示词
+                if (e.ctrlKey && e.key === 'Enter') {
+                    if (document.activeElement.id === 'aiInput') {
+                        checkAI();
+                    }
+                }
+                
+                // Ctrl+L 清空AI输入
+                if (e.ctrlKey && e.key === 'l') {
+                    if (document.activeElement.id === 'aiInput') {
+                        clearAI();
+                    }
+                }
+            });
+            
+            console.log('初始化完成');
+        });
+    </script>
+</body>
+</html>
